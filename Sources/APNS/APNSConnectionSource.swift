@@ -12,6 +12,10 @@ internal final class APNSConnectionSource: ConnectionPoolSource {
         on eventLoop: EventLoop
     ) -> EventLoopFuture<APNSwiftConnection> {
         APNSwiftConnection.connect(configuration: self.configuration, on: eventLoop)
+            .flatMapError { (error) -> EventLoopFuture<APNSwiftConnection> in
+                logger.notice("APNSConnection failed with error: \(error.localizedDescription), reconnecting...")
+                return self.makeConnection(logger: logger, on: eventLoop)
+            }
     }
 }
 
@@ -22,5 +26,9 @@ extension APNSwiftConnection: ConnectionPoolItem {
 
     public var isClosed: Bool {
         !self.channel.isActive
+    }
+    
+    public func close() -> EventLoopFuture<Void> {
+        return self.channel.close()
     }
 }
